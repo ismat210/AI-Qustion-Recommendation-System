@@ -1,0 +1,175 @@
+                    ┌──────────────────────────────┐
+                    │        USER (Streamlit)      │
+                    └─────────────┬────────────────┘
+                                  │
+                                  ▼
+────────────────────────────────────────────────────────
+                FRONTEND (STREAMLIT)
+────────────────────────────────────────────────────────
+ frontend/streamlit_app.py
+        │
+        ├── pages/1_Upload.py
+        │        │
+        │        ▼
+        │   components/uploader.py
+        │        │
+        │        ▼
+        │   utils/api_client.py  ───────────────┐
+        │                                      │
+        ├── pages/2_Process.py                 │
+        │                                      ▼
+        ├── pages/3_Recommend.py        FASTAPI BACKEND
+                                  ─────────────────────────────
+                                          backend/app/main.py
+                                                     │
+     ┌───────────────────────────────────────────────┼───────────────────────────────────────────────┐
+     ▼                                               ▼                                               ▼
+UPLOAD API                                      PROCESS API                                  RECOMMEND API
+backend/app/api/upload.py                       backend/app/api/process.py                   backend/app/api/recommend.py
+     │                                               │                                               │
+     ▼                                               ▼                                               ▼
+file_service.py                                ocr_service.py                             ml_service.py
+     │                                               │                                               │
+     ▼                                               ▼                                               ▼
+data/raw/                                      preprocessing/pdf_parser.py               ml/inference.py
+     │                                               │                                               │
+     ▼                                               ▼                                               ▼
+logger.py + exceptions.py                      nlp/extract_questions.py                 similarity search
+                                                                                               │
+                                                                                               ▼
+                                                                                      ranked question output
+                                                                                               │
+                                                                                               ▼
+                                                                                     returned to Streamlit UI
+
+────────────────────────────────────────────────────────
+                DATA + NLP + ML PIPELINE
+────────────────────────────────────────────────────────
+raw file
+   ↓
+pdf_parser.py / docx_parser.py / OCR (tesseract)
+   ↓
+clean_text.py
+   ↓
+extract_questions.py (NLP)
+   ↓
+JSON format
+   ↓
+db_service.py
+   ↓
+SQL DATABASE (questions table)
+
+────────────────────────────────────────────────────────
+                     ML PIPELINE
+────────────────────────────────────────────────────────
+SQL DB
+   ↓
+dataset_builder.py
+   ↓
+feature_engineering.py
+   ↓
+train_model.py
+   ↓
+evaluate_model.py
+   ↓
+model.pkl (saved model)
+   ↓
+inference.py
+   ↓
+recommendation engine
+
+────────────────────────────────────────────────────────
+                   TESTING LAYER
+────────────────────────────────────────────────────────
+backend/app/tests/
+   ├── test_upload.py
+   ├── test_ocr.py
+   ├── test_ml.py
+   ├── test_api.py
+
+pytest
+   ↓
+validate system integrity
+
+────────────────────────────────────────────────────────
+                 LOGGING + EXCEPTIONS
+────────────────────────────────────────────────────────
+EVERY LAYER USES:
+
+utils/logger.py
+    ↓
+app.log (tracking system flow)
+
+utils/exceptions.py
+    ↓
+safe error handling across:
+- upload failure
+- OCR failure
+- DB failure
+- ML failure
+
+────────────────────────────────────────────────────────
+                   DEPLOYMENT FLOW
+────────────────────────────────────────────────────────
+Docker
+   │
+   ├── backend Dockerfile → FastAPI + ML
+   ├── frontend Dockerfile → Streamlit
+   │
+   ▼
+docker-compose.yml
+   │
+   ▼
+Kubernetes
+   ├── backend deployment
+   ├── frontend deployment
+   ├── service.yaml
+   ├── ingress.yaml
+
+
+🧠 SIMPLE MENTAL MODEL (VERY IMPORTANT)
+
+Think of your system as 5 layers:
+
+🟢 1. UI Layer
+
+Streamlit → user interacts
+
+🔵 2. API Layer
+
+FastAPI → receives requests
+
+🟡 3. Processing Layer
+
+OCR + NLP → extract text & structure
+
+🟠 4. Intelligence Layer
+
+ML → recommendation engine
+
+🔴 5. Infrastructure Layer
+
+Docker + Kubernetes + Logging + Tests
+
+
+
+
+UPLOAD
+  ↓
+save file → backend/data/raw/
+
+PROCESS
+  ↓
+extract + clean + NLP
+  ↓
+save JSON → backend/data/processed/
+
+TRAIN ML
+  ↓
+train model
+  ↓
+save model → backend/data/models/
+
+RECOMMEND
+  ↓
+load latest model from backend/data/models/
