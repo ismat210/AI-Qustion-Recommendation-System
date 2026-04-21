@@ -1,0 +1,16 @@
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.pkl
+
+backend/data
+logs
+notebooks
+
+.git
+.gitignore
+Dockerfile
+docker-compose.yml

@@ -1,7 +1,7 @@
 FROM python:3.11-slim
 
 # ======================================================
-# SYSTEM DEPENDENCIES (IMPORTANT for OCR + ML libs)
+# SYSTEM DEPENDENCIES
 # ======================================================
 RUN apt-get update && apt-get install -y \
     gcc \
@@ -17,14 +17,19 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # ======================================================
-# COPY ONLY DEPENDENCIES FIRST (CACHE OPTIMIZATION)
+# COPY DEPENDENCIES FIRST (CACHE OPTIMIZATION)
 # ======================================================
 COPY pyproject.toml uv.lock ./
 
 # install uv
 RUN pip install --no-cache-dir uv
 
-# install dependencies
+# ======================================================
+# 🔥 IMPORTANT FIX: FORCE CPU-ONLY TORCH
+# ======================================================
+RUN pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+# install project dependencies
 RUN uv sync
 
 # ======================================================
@@ -45,4 +50,4 @@ EXPOSE 8000
 # ======================================================
 # RUN SERVER
 # ======================================================
-CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
